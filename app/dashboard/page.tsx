@@ -12,19 +12,35 @@ import { Expense, Contribution, RequiredFund, DashboardMetrics, CONTRIBUTORS } f
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
-    const [expRes, conRes, rfRes] = await Promise.all([
-      supabase.from("expenses").select("*"),
-      supabase.from("contributions").select("*"),
-      supabase.from("required_fund").select("*"),
-    ]);
-    const expenses: Expense[] = expRes.data ?? [];
-    const contributions: Contribution[] = conRes.data ?? [];
-    const requiredFunds: RequiredFund[] = rfRes.data ?? [];
-    setMetrics(calcDashboardMetrics(expenses, contributions, requiredFunds));
-    setLoading(false);
+    setError("");
+
+    try {
+      const [expRes, conRes, rfRes] = await Promise.all([
+        supabase.from("expenses").select("*"),
+        supabase.from("contributions").select("*"),
+        supabase.from("required_fund").select("*"),
+      ]);
+
+      const queryError = expRes.error || conRes.error || rfRes.error;
+      if (queryError) {
+        throw queryError;
+      }
+
+      const expenses: Expense[] = expRes.data ?? [];
+      const contributions: Contribution[] = conRes.data ?? [];
+      const requiredFunds: RequiredFund[] = rfRes.data ?? [];
+      setMetrics(calcDashboardMetrics(expenses, contributions, requiredFunds));
+    } catch (err) {
+      console.error("Failed to load dashboard data", err);
+      setMetrics(null);
+      setError(err instanceof Error ? err.message : "Unable to load dashboard data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -102,6 +118,17 @@ export default function DashboardPage() {
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
           </div>
+        ) : error ? (
+          <div className="glass rounded-2xl border border-red-500/20 p-6 text-center">
+            <div className="text-sm font-medium text-red-400">Unable to load dashboard</div>
+            <p className="text-xs text-gray-500 mt-2">{error}</p>
+            <button
+              onClick={fetchData}
+              className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-red-500/15 text-red-300 border border-red-500/25 hover:bg-red-500/25 transition-all"
+            >
+              Retry
+            </button>
+          </div>
         ) : metrics ? (
           <>
             {/* KPI Grid */}
@@ -162,7 +189,17 @@ export default function DashboardPage() {
                               <td className="py-3 font-medium text-gray-300">{cs.name}</td>
                               <td className="py-3 text-right font-mono-jet text-emerald-400">{formatCurrency(cs.contributed)}</td>
                               <td className="py-3 text-right font-mono-jet text-gray-400">{formatCurrency(cs.share)}</td>
-                              <td className="py-3 text-right font-mono-jet text-red-400">{formatCurrency(cs.remaining)}</td>
+                              <td
+                                className={`py-3 text-right font-mono-jet ${
+                                  cs.remaining > 0
+                                    ? "text-red-400"
+                                    : cs.remaining < 0
+                                    ? "text-emerald-400"
+                                    : "text-gray-300"
+                                }`}
+                              >
+                                {formatCurrency(cs.remaining)}
+                              </td>
                               <td className="py-3 text-right">
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                   s.type === "paying"

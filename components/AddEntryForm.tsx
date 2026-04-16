@@ -12,6 +12,8 @@ interface AddEntryFormProps {
 
 type Tab = "expense" | "contribution" | "fund";
 
+const GIVEN_TO_OPTIONS = [FUND_MANAGER, ...CONTRIBUTORS];
+
 export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProps) {
   const [activeTab, setActiveTab] = useState<Tab>("expense");
   const [loading, setLoading] = useState(false);
@@ -91,6 +93,13 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
   const inputClass =
     "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 focus:bg-indigo-500/5 transition-all";
   const labelClass = "text-xs font-medium text-gray-400 mb-1.5 block";
+  const amountInputProps = {
+    type: "number" as const,
+    step: "0.01",
+    min: "0",
+    inputMode: "decimal" as const,
+    onWheel: (e: React.WheelEvent<HTMLInputElement>) => e.currentTarget.blur(),
+  };
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "expense", label: "Expense" },
@@ -142,7 +151,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
             </div>
             <div>
               <label className={labelClass}>Amount (₹)</label>
-              <input type="number" value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" className={inputClass} />
+              <input {...amountInputProps} value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Reason</label>
@@ -167,7 +176,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
             </div>
             <div>
               <label className={labelClass}>Amount (₹)</label>
-              <input type="number" value={conAmount} onChange={(e) => setConAmount(e.target.value)} placeholder="0.00" className={inputClass} />
+              <input {...amountInputProps} value={conAmount} onChange={(e) => setConAmount(e.target.value)} placeholder="0.00" className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Contributor</label>
@@ -179,7 +188,17 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
             </div>
             <div>
               <label className={labelClass}>Given To</label>
-              <input type="text" value={conGivenTo} onChange={(e) => setConGivenTo(e.target.value)} className={inputClass} />
+              <select
+                value={conGivenTo}
+                onChange={(e) => setConGivenTo(e.target.value)}
+                className={inputClass}
+              >
+                {GIVEN_TO_OPTIONS.map((person) => (
+                  <option key={person} value={person} className="bg-gray-900">
+                    {person}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelClass}>Note</label>
@@ -204,7 +223,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
             </div>
             <div>
               <label className={labelClass}>Amount (₹)</label>
-              <input type="number" value={rfAmount} onChange={(e) => setRfAmount(e.target.value)} placeholder="0.00" className={inputClass} />
+              <input {...amountInputProps} value={rfAmount} onChange={(e) => setRfAmount(e.target.value)} placeholder="0.00" className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Reason</label>

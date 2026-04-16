@@ -2,11 +2,11 @@ import {
   Expense,
   Contribution,
   RequiredFund,
-  ContributorName,
   ContributorStats,
   Settlement,
   DashboardMetrics,
   CONTRIBUTORS,
+  ContributorName,
   FUND_MANAGER,
 } from "@/types";
 
@@ -15,7 +15,9 @@ export function calcTotalExpense(expenses: Expense[]): number {
 }
 
 export function calcTotalContribution(contributions: Contribution[]): number {
-  return contributions.reduce((sum, c) => sum + Number(c.amount), 0);
+  return contributions.reduce((sum, c) => {
+    return c.given_to === FUND_MANAGER ? sum + Number(c.amount) : sum;
+  }, 0);
 }
 
 export function calcTotalRequiredFund(requiredFunds: RequiredFund[]): number {
@@ -49,58 +51,69 @@ export function calcContributorStats(
   contributions: Contribution[],
   share: number
 ): ContributorStats[] {
+  const creditedAmounts = CONTRIBUTORS.reduce<Record<ContributorName, number>>(
+    (acc, name) => {
+      acc[name] = 0;
+      return acc;
+    },
+    {} as Record<ContributorName, number>
+  );
+
+  contributions.forEach((contribution) => {
+    const amount = Number(contribution.amount);
+    const contributor = contribution.partner_name as ContributorName;
+
+    if (CONTRIBUTORS.includes(contributor)) {
+      creditedAmounts[contributor] += amount;
+    }
+
+    const recipient = contribution.given_to;
+    if (recipient === FUND_MANAGER) {
+      return;
+    }
+
+    if (CONTRIBUTORS.includes(recipient as ContributorName)) {
+      // Internal settlements increase the payer's net contribution
+      // and decrease the receiver's net contribution.
+      creditedAmounts[recipient as ContributorName] -= amount;
+    }
+  });
+
   return CONTRIBUTORS.map((name) => {
-    const contributed = contributions
-      .filter((c) => c.partner_name === name)
-      .reduce((sum, c) => sum + Number(c.amount), 0);
-    const remaining = Math.max(0, share - contributed);
+    const contributed = creditedAmounts[name];
+    const remaining = share - contributed;
     const balance = contributed - share;
     return { name, contributed, share, remaining, balance };
   });
 }
 
 export function calcSettlements(
-  contributorStats: ContributorStats[],
-  actualRequiredFund: number
+  contributorStats: ContributorStats[]
 ): Settlement[] {
   const settlements: Settlement[] = [];
 
-  if (actualRequiredFund > 0) {
-    // Underpaid contributors pay Lalbihari Ram
-    contributorStats.forEach((cs) => {
-      if (cs.balance < 0) {
-        settlements.push({
-          from: cs.name,
-          to: FUND_MANAGER,
-          amount: Math.abs(cs.balance),
-        });
-      }
-    });
-  } else {
-    // Contributor-to-contributor settlement
-    const underpaid = contributorStats
-      .filter((cs) => cs.balance < 0)
-      .map((cs) => ({ name: cs.name, amount: Math.abs(cs.balance) }));
-    const overpaid = contributorStats
-      .filter((cs) => cs.balance > 0)
-      .map((cs) => ({ name: cs.name, amount: cs.balance }));
+  const underpaid = contributorStats
+    .filter((cs) => cs.balance < 0)
+    .map((cs) => ({ name: cs.name, amount: Math.abs(cs.balance) }));
+  const overpaid = contributorStats
+    .filter((cs) => cs.balance > 0)
+    .map((cs) => ({ name: cs.name, amount: cs.balance }));
 
-    let i = 0;
-    let j = 0;
-    while (i < underpaid.length && j < overpaid.length) {
-      const transfer = Math.min(underpaid[i].amount, overpaid[j].amount);
-      if (transfer > 0.01) {
-        settlements.push({
-          from: underpaid[i].name,
-          to: overpaid[j].name,
-          amount: transfer,
-        });
-      }
-      underpaid[i].amount -= transfer;
-      overpaid[j].amount -= transfer;
-      if (underpaid[i].amount < 0.01) i++;
-      if (overpaid[j].amount < 0.01) j++;
+  let i = 0;
+  let j = 0;
+  while (i < underpaid.length && j < overpaid.length) {
+    const transfer = Math.min(underpaid[i].amount, overpaid[j].amount);
+    if (transfer > 0.01) {
+      settlements.push({
+        from: underpaid[i].name,
+        to: overpaid[j].name,
+        amount: transfer,
+      });
     }
+    underpaid[i].amount -= transfer;
+    overpaid[j].amount -= transfer;
+    if (underpaid[i].amount < 0.01) i++;
+    if (overpaid[j].amount < 0.01) j++;
   }
 
   return settlements;
@@ -121,7 +134,7 @@ export function calcDashboardMetrics(
   );
   const treasuryBalance = calcTreasuryBalance(totalContribution, totalExpense);
   const contributorStats = calcContributorStats(contributions, perContributorShare);
-  const settlements = calcSettlements(contributorStats, actualRequiredFund);
+  const settlements = calcSettlements(contributorStats);
 
   return {
     totalExpense,

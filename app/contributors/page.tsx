@@ -11,21 +11,38 @@ export default function ContributorsPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [expRes, conRes, rfRes] = await Promise.all([
-        supabase.from("expenses").select("*"),
-        supabase.from("contributions").select("*"),
-        supabase.from("required_fund").select("*"),
-      ]);
-      const expenses: Expense[] = expRes.data ?? [];
-      const allContributions: Contribution[] = conRes.data ?? [];
-      const requiredFunds: RequiredFund[] = rfRes.data ?? [];
-      setContributions(allContributions);
-      setMetrics(calcDashboardMetrics(expenses, allContributions, requiredFunds));
-      setLoading(false);
+      setError("");
+
+      try {
+        const [expRes, conRes, rfRes] = await Promise.all([
+          supabase.from("expenses").select("*"),
+          supabase.from("contributions").select("*"),
+          supabase.from("required_fund").select("*"),
+        ]);
+
+        const queryError = expRes.error || conRes.error || rfRes.error;
+        if (queryError) {
+          throw queryError;
+        }
+
+        const expenses: Expense[] = expRes.data ?? [];
+        const allContributions: Contribution[] = conRes.data ?? [];
+        const requiredFunds: RequiredFund[] = rfRes.data ?? [];
+        setContributions(allContributions);
+        setMetrics(calcDashboardMetrics(expenses, allContributions, requiredFunds));
+      } catch (err) {
+        console.error("Failed to load contributor data", err);
+        setMetrics(null);
+        setContributions([]);
+        setError(err instanceof Error ? err.message : "Unable to load contributor data.");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
@@ -43,6 +60,11 @@ export default function ContributorsPage() {
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+          </div>
+        ) : error ? (
+          <div className="glass rounded-2xl border border-red-500/20 p-6 text-center">
+            <div className="text-sm font-medium text-red-400">Unable to load contributors</div>
+            <p className="text-xs text-gray-500 mt-2">{error}</p>
           </div>
         ) : metrics ? (
           <div className="grid sm:grid-cols-2 gap-5">

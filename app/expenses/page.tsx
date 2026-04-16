@@ -15,16 +15,31 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [loggedIn, setLoggedIn] = useState(false);
   const [page, setPage] = useState(0);
+  const [error, setError] = useState("");
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("expenses")
-      .select("*")
-      .order("date", { ascending: false })
-      .order("created_at", { ascending: false });
-    setExpenses(data ?? []);
-    setLoading(false);
+    setError("");
+
+    try {
+      const { data, error: queryError } = await supabase
+        .from("expenses")
+        .select("*")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (queryError) {
+        throw queryError;
+      }
+
+      setExpenses(data ?? []);
+    } catch (err) {
+      console.error("Failed to load expenses", err);
+      setExpenses([]);
+      setError(err instanceof Error ? err.message : "Unable to load expenses.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -72,6 +87,17 @@ export default function ExpensesPage() {
               {loading ? (
                 <div className="flex items-center justify-center h-48">
                   <div className="w-6 h-6 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="px-5 py-12 text-center">
+                  <div className="text-sm font-medium text-red-400">Unable to load expenses</div>
+                  <p className="text-xs text-gray-500 mt-2">{error}</p>
+                  <button
+                    onClick={fetchExpenses}
+                    className="mt-4 px-4 py-2 rounded-lg text-sm font-medium bg-red-500/15 text-red-300 border border-red-500/25 hover:bg-red-500/25 transition-all"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : (
                 <>

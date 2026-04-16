@@ -22,8 +22,20 @@ export default function ContributorCard({
   contributions,
 }: ContributorCardProps) {
   const settlement = getContributorSettlement(stats.name, settlements);
-  const myContributions = contributions
-    .filter((c) => c.partner_name === stats.name)
+  const ledgerEntries = contributions
+    .filter(
+      (c) => c.partner_name === stats.name || c.given_to === stats.name
+    )
+    .map((c) => {
+      const isOutgoing = c.partner_name === stats.name;
+      return {
+        id: `${c.id}-${isOutgoing ? "out" : "in"}`,
+        date: c.date,
+        note: c.note,
+        amount: isOutgoing ? Number(c.amount) : -Number(c.amount),
+        directionLabel: isOutgoing ? `To: ${c.given_to}` : `From: ${c.partner_name}`,
+      };
+    })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const colorConfig = CONTRIBUTOR_COLORS[stats.name as keyof typeof CONTRIBUTOR_COLORS] ?? CONTRIBUTOR_COLORS["Ajay Kumar"];
@@ -109,7 +121,7 @@ export default function ContributorCard({
           <div className="text-xs text-gray-600 mt-0.5">Share</div>
         </div>
         <div className="text-center">
-          <div className={`text-sm font-bold font-mono-jet ${stats.remaining > 0 ? "text-red-400" : "text-emerald-400"}`}>
+          <div className={`text-sm font-bold font-mono-jet ${stats.remaining > 0 ? "text-red-400" : stats.remaining < 0 ? "text-emerald-400" : "text-gray-300"}`}>
             {formatCurrency(stats.remaining)}
           </div>
           <div className="text-xs text-gray-600 mt-0.5">Remaining</div>
@@ -130,17 +142,24 @@ export default function ContributorCard({
       {/* Ledger */}
       <div className="border-t border-white/[0.04] px-5 py-4">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Contributions</div>
-        {myContributions.length === 0 ? (
+        {ledgerEntries.length === 0 ? (
           <div className="text-xs text-gray-600 py-2 text-center">No contributions yet</div>
         ) : (
           <div className="space-y-2 max-h-48 overflow-y-auto scrollbar-thin">
-            {myContributions.map((c) => (
-              <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
+            {ledgerEntries.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between py-1.5 border-b border-white/[0.03] last:border-0">
                 <div>
-                  <div className="text-xs text-gray-400">{new Date(c.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</div>
-                  <div className="text-xs text-gray-600">To: {c.given_to}</div>
+                  <div className="text-xs text-gray-400">{new Date(entry.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</div>
+                  <div className="text-xs text-gray-600">{entry.directionLabel}</div>
+                  {entry.note ? <div className="text-xs text-gray-700">{entry.note}</div> : null}
                 </div>
-                <div className="text-xs font-mono-jet font-medium text-white">{formatCurrency(c.amount)}</div>
+                <div
+                  className={`text-xs font-mono-jet font-medium ${
+                    entry.amount < 0 ? "text-red-400" : "text-white"
+                  }`}
+                >
+                  {formatCurrency(entry.amount)}
+                </div>
               </div>
             ))}
           </div>
