@@ -22,8 +22,13 @@ export function calcTotalRequiredFund(requiredFunds: RequiredFund[]): number {
   return requiredFunds.reduce((sum, r) => sum + Number(r.amount), 0);
 }
 
-export function calcPerContributorShare(totalExpense: number): number {
-  return totalExpense / 4;
+export const DEFAULT_SHARE_PERSONS = 4;
+
+export function calcPerContributorShare(
+  totalContribution: number,
+  sharePersons: number = DEFAULT_SHARE_PERSONS
+): number {
+  return totalContribution / sharePersons;
 }
 
 export function calcActualRequiredFund(
@@ -109,7 +114,7 @@ export function calcDashboardMetrics(
   const totalExpense = calcTotalExpense(expenses);
   const totalContribution = calcTotalContribution(contributions);
   const totalRequiredFund = calcTotalRequiredFund(requiredFunds);
-  const perContributorShare = calcPerContributorShare(totalExpense);
+  const perContributorShare = calcPerContributorShare(totalContribution);
   const actualRequiredFund = calcActualRequiredFund(
     totalRequiredFund,
     totalContribution
