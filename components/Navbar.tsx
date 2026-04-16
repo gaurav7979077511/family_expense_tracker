@@ -40,6 +40,7 @@ export default function Navbar() {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/expenses", label: "Expenses" },
     { href: "/contributors", label: "Contributors" },
+    { href: "/entries", label: "Add Entry" },
   ];
 
   return (
