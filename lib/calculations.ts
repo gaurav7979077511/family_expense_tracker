@@ -1,0 +1,153 @@
+import {
+  Expense,
+  Contribution,
+  RequiredFund,
+  ContributorName,
+  ContributorStats,
+  Settlement,
+  DashboardMetrics,
+  CONTRIBUTORS,
+  FUND_MANAGER,
+} from "@/types";
+
+export function calcTotalExpense(expenses: Expense[]): number {
+  return expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+}
+
+export function calcTotalContribution(contributions: Contribution[]): number {
+  return contributions.reduce((sum, c) => sum + Number(c.amount), 0);
+}
+
+export function calcTotalRequiredFund(requiredFunds: RequiredFund[]): number {
+  return requiredFunds.reduce((sum, r) => sum + Number(r.amount), 0);
+}
+
+export function calcPerContributorShare(totalExpense: number): number {
+  return totalExpense / 4;
+}
+
+export function calcActualRequiredFund(
+  totalRequiredFund: number,
+  totalContribution: number
+): number {
+  return totalRequiredFund - totalContribution;
+}
+
+export function calcTreasuryBalance(
+  totalContribution: number,
+  totalExpense: number
+): number {
+  return totalContribution - totalExpense;
+}
+
+export function calcContributorStats(
+  contributions: Contribution[],
+  share: number
+): ContributorStats[] {
+  return CONTRIBUTORS.map((name) => {
+    const contributed = contributions
+      .filter((c) => c.partner_name === name)
+      .reduce((sum, c) => sum + Number(c.amount), 0);
+    const remaining = Math.max(0, share - contributed);
+    const balance = contributed - share;
+    return { name, contributed, share, remaining, balance };
+  });
+}
+
+export function calcSettlements(
+  contributorStats: ContributorStats[],
+  actualRequiredFund: number
+): Settlement[] {
+  const settlements: Settlement[] = [];
+
+  if (actualRequiredFund > 0) {
+    // Underpaid contributors pay Lalbihari Ram
+    contributorStats.forEach((cs) => {
+      if (cs.balance < 0) {
+        settlements.push({
+          from: cs.name,
+          to: FUND_MANAGER,
+          amount: Math.abs(cs.balance),
+        });
+      }
+    });
+  } else {
+    // Contributor-to-contributor settlement
+    const underpaid = contributorStats
+      .filter((cs) => cs.balance < 0)
+      .map((cs) => ({ name: cs.name, amount: Math.abs(cs.balance) }));
+    const overpaid = contributorStats
+      .filter((cs) => cs.balance > 0)
+      .map((cs) => ({ name: cs.name, amount: cs.balance }));
+
+    let i = 0;
+    let j = 0;
+    while (i < underpaid.length && j < overpaid.length) {
+      const transfer = Math.min(underpaid[i].amount, overpaid[j].amount);
+      if (transfer > 0.01) {
+        settlements.push({
+          from: underpaid[i].name,
+          to: overpaid[j].name,
+          amount: transfer,
+        });
+      }
+      underpaid[i].amount -= transfer;
+      overpaid[j].amount -= transfer;
+      if (underpaid[i].amount < 0.01) i++;
+      if (overpaid[j].amount < 0.01) j++;
+    }
+  }
+
+  return settlements;
+}
+
+export function calcDashboardMetrics(
+  expenses: Expense[],
+  contributions: Contribution[],
+  requiredFunds: RequiredFund[]
+): DashboardMetrics {
+  const totalExpense = calcTotalExpense(expenses);
+  const totalContribution = calcTotalContribution(contributions);
+  const totalRequiredFund = calcTotalRequiredFund(requiredFunds);
+  const perContributorShare = calcPerContributorShare(totalExpense);
+  const actualRequiredFund = calcActualRequiredFund(
+    totalRequiredFund,
+    totalContribution
+  );
+  const treasuryBalance = calcTreasuryBalance(totalContribution, totalExpense);
+  const contributorStats = calcContributorStats(contributions, perContributorShare);
+  const settlements = calcSettlements(contributorStats, actualRequiredFund);
+
+  return {
+    totalExpense,
+    totalContribution,
+    totalRequiredFund,
+    perContributorShare,
+    actualRequiredFund,
+    treasuryBalance,
+    contributorStats,
+    settlements,
+  };
+}
+
+export function getContributorSettlement(
+  name: string,
+  settlements: Settlement[]
+): { type: "paying" | "receiving" | "settled"; amount: number; counterpart: string } {
+  const paying = settlements.find((s) => s.from === name);
+  if (paying) return { type: "paying", amount: paying.amount, counterpart: paying.to };
+
+  const receiving = settlements.find((s) => s.to === name);
+  if (receiving)
+    return { type: "receiving", amount: receiving.amount, counterpart: receiving.from };
+
+  return { type: "settled", amount: 0, counterpart: "" };
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
