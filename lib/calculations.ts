@@ -50,7 +50,7 @@ export function calcContributorStats(
   requiredFund: number
 ): ContributorStats[] {
   // Each person's required share of the fund
-  const perPersonShare = requiredFund / DEFAULT_SHARE_PERSONS;
+  const perPersonShare = ( totalContribution + requiredFund ) / DEFAULT_SHARE_PERSONS;
   
   return CONTRIBUTORS.map((name) => {
     // Get contributions made BY this person (given_to indicates who they gave money for)
