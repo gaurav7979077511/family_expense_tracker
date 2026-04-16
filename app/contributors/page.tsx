@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import ContributorCard from "@/components/ContributorCard";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { calcDashboardMetrics } from "@/lib/calculations";
 import { Expense, Contribution, RequiredFund, DashboardMetrics } from "@/types";
 
@@ -15,6 +15,7 @@ export default function ContributorsPage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      const supabase = getSupabaseBrowserClient();
       const [expRes, conRes, rfRes] = await Promise.all([
         supabase.from("expenses").select("*"),
         supabase.from("contributions").select("*"),

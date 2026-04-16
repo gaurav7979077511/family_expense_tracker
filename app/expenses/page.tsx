@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Navbar from "@/components/Navbar";
 import AddEntryForm from "@/components/AddEntryForm";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { calcTotalExpense, formatCurrency } from "@/lib/calculations";
 import { isLoggedIn } from "@/lib/auth";
 import { Expense } from "@/types";
@@ -18,6 +18,7 @@ export default function ExpensesPage() {
 
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
     const { data } = await supabase
       .from("expenses")
       .select("*")

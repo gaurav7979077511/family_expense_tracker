@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import KPICard from "@/components/KPICard";
 import SettlementCard from "@/components/SettlementCard";
 import ContributionChart from "@/components/ContributionChart";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { calcDashboardMetrics, formatCurrency, getContributorSettlement } from "@/lib/calculations";
 import { Expense, Contribution, RequiredFund, DashboardMetrics, CONTRIBUTORS } from "@/types";
 
@@ -15,6 +15,7 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
     const [expRes, conRes, rfRes] = await Promise.all([
       supabase.from("expenses").select("*"),
       supabase.from("contributions").select("*"),

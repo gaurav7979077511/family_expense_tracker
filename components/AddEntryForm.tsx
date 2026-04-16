@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { CONTRIBUTORS } from "@/types";
 import { FUND_MANAGER } from "@/types";
 
@@ -44,6 +44,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
   const handleSubmitExpense = async () => {
     if (!expAmount || !expDate) return showFeedback("Fill all fields", true);
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
     const { error: err } = await supabase.from("expenses").insert({
       date: expDate,
       amount: parseFloat(expAmount),
@@ -59,6 +60,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
   const handleSubmitContribution = async () => {
     if (!conAmount || !conDate || !conPartner) return showFeedback("Fill all fields", true);
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
     const { error: err } = await supabase.from("contributions").insert({
       date: conDate,
       amount: parseFloat(conAmount),
@@ -76,6 +78,7 @@ export default function AddEntryForm({ isLoggedIn, onSuccess }: AddEntryFormProp
   const handleSubmitFund = async () => {
     if (!rfAmount || !rfDate) return showFeedback("Fill all fields", true);
     setLoading(true);
+    const supabase = getSupabaseBrowserClient();
     const { error: err } = await supabase.from("required_fund").insert({
       date: rfDate,
       amount: parseFloat(rfAmount),
