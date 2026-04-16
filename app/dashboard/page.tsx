@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const kpiData = metrics
     ? [
         {
-          label: "Actual Required Fund",
+          label: "Required Fund (ज़रूरी)",
           value: formatCurrency(metrics.actualRequiredFund),
           trend: (metrics.actualRequiredFund > 0 ? "negative" : "positive") as "positive" | "negative",
           highlight: true,
@@ -68,7 +68,7 @@ export default function DashboardPage() {
           ),
         },
         {
-          label: "Total Contribution",
+          label: "Contribution (जमा)",
           value: formatCurrency(metrics.totalContribution),
           trend: "positive" as const,
           icon: (
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           ),
         },
         {
-          label: "Total Expense",
+          label: "Expense (खर्च)",
           value: formatCurrency(metrics.totalExpense),
           trend: "negative" as const,
           icon: (
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           ),
         },
         {
-          label: "Treasury Balance",
+          label: "Treasury (बचत)",
           value: formatCurrency(metrics.treasuryBalance),
           trend: (metrics.treasuryBalance >= 0 ? "positive" : "negative") as "positive" | "negative",
           icon: (
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           ),
         },
         {
-          label: "Per Contributor Share",
+          label: "Per Person Share",
           value: formatCurrency(metrics.perContributorShare),
           trend: "neutral" as const,
           icon: (
@@ -296,15 +296,15 @@ export default function DashboardPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Total Managed</span>
+                      <span className="text-xs text-gray-500">Total Managed (खर्च)</span>
                       <span className="text-xs font-mono-jet font-medium text-white">{formatCurrency(metrics.totalExpense)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Fund Collected</span>
+                      <span className="text-xs text-gray-500">Fund Collected (जमा)</span>
                       <span className="text-xs font-mono-jet font-medium text-emerald-400">{formatCurrency(metrics.totalContribution)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Still Required</span>
+                      <span className="text-xs text-gray-500">Still Required (ज़रूरी)</span>
                       <span className={`text-xs font-mono-jet font-medium ${metrics.actualRequiredFund > 0 ? "text-red-400" : "text-emerald-400"}`}>
                         {formatCurrency(Math.abs(metrics.actualRequiredFund))}
                       </span>
