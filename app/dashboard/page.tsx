@@ -9,6 +9,15 @@ import { supabase } from "@/lib/supabase";
 import { calcDashboardMetrics, formatCurrency, getContributorSettlement } from "@/lib/calculations";
 import { Expense, Contribution, RequiredFund, DashboardMetrics, CONTRIBUTORS } from "@/types";
 
+const formatWholeCurrency = (amount: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+const getFirstName = (name: string) => name.split(" ")[0];
+
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,15 +178,65 @@ export default function DashboardPage() {
 
                 {/* Contributor Quick-View */}
                 <div className="glass rounded-2xl border border-white/[0.06] p-5 mt-4">
-                  <h2 className="text-sm font-semibold text-gray-300 mb-4">Contributor Overview</h2>
+                  <div className="flex flex-wrap items-end justify-between gap-2 mb-4">
+                    <div>
+                      <h2 className="text-sm font-semibold text-gray-300">Contribution Overview</h2>
+                      <p className="text-[11px] text-gray-600 mt-0.5">Paid, share and balance by person</p>
+                    </div>
+                  </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <div className="space-y-3 sm:hidden">
+                      {metrics.contributorStats.map((cs) => {
+                        const s = getContributorSettlement(cs.name, metrics.settlements);
+                        return (
+                          <div key={cs.name} className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="font-medium text-gray-300">{getFirstName(cs.name)}</div>
+                              <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                                s.type === "paying"
+                                  ? "bg-red-500/15 text-red-400 border border-red-500/20"
+                                  : s.type === "receiving"
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
+                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/20"
+                              }`}>
+                                {s.type === "paying" ? "देना है" : s.type === "receiving" ? "लेना है" : "Settled"}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 mt-3 text-right">
+                              <div>
+                                <div className="text-[10px] uppercase tracking-wider text-gray-600">Paid</div>
+                                <div className="text-xs font-mono-jet text-emerald-400">{formatWholeCurrency(cs.contributed)}</div>
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-wider text-gray-600">Share</div>
+                                <div className="text-xs font-mono-jet text-gray-400">{formatWholeCurrency(cs.share)}</div>
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-wider text-gray-600">Balance</div>
+                                <div
+                                  className={`text-xs font-mono-jet ${
+                                    cs.remaining > 0
+                                      ? "text-red-400"
+                                      : cs.remaining < 0
+                                      ? "text-emerald-400"
+                                      : "text-gray-300"
+                                  }`}
+                                >
+                                  {formatWholeCurrency(cs.remaining)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <table className="hidden w-full text-sm sm:table">
                       <thead>
                         <tr className="text-xs text-gray-500 uppercase tracking-wider border-b border-white/[0.05]">
-                          <th className="text-left pb-3 font-medium">Contributor</th>
-                          <th className="text-right pb-3 font-medium">Contributed</th>
+                          <th className="text-left pb-3 font-medium">Name</th>
+                          <th className="text-right pb-3 font-medium">Paid</th>
                           <th className="text-right pb-3 font-medium">Share</th>
-                          <th className="text-right pb-3 font-medium">Remaining</th>
+                          <th className="text-right pb-3 font-medium">Balance</th>
                           <th className="text-right pb-3 font-medium">Status</th>
                         </tr>
                       </thead>
@@ -186,9 +245,9 @@ export default function DashboardPage() {
                           const s = getContributorSettlement(cs.name, metrics.settlements);
                           return (
                             <tr key={cs.name} className="hover:bg-white/[0.02] transition-colors">
-                              <td className="py-3 font-medium text-gray-300">{cs.name}</td>
-                              <td className="py-3 text-right font-mono-jet text-emerald-400">{formatCurrency(cs.contributed)}</td>
-                              <td className="py-3 text-right font-mono-jet text-gray-400">{formatCurrency(cs.share)}</td>
+                              <td className="py-3 font-medium text-gray-300">{getFirstName(cs.name)}</td>
+                              <td className="py-3 text-right font-mono-jet text-emerald-400">{formatWholeCurrency(cs.contributed)}</td>
+                              <td className="py-3 text-right font-mono-jet text-gray-400">{formatWholeCurrency(cs.share)}</td>
                               <td
                                 className={`py-3 text-right font-mono-jet ${
                                   cs.remaining > 0
@@ -198,7 +257,7 @@ export default function DashboardPage() {
                                     : "text-gray-300"
                                 }`}
                               >
-                                {formatCurrency(cs.remaining)}
+                                {formatWholeCurrency(cs.remaining)}
                               </td>
                               <td className="py-3 text-right">
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
